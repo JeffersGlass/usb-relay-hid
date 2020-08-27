@@ -29,7 +29,7 @@ def ctest():
 	time.sleep(1)
 	relays.openRelay(1)
 	time.sleep(1)
-
+	relays.blinkRelay(1)
 	relays.closeDev()
 	relays.unloadLib()
 	
