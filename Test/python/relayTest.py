@@ -6,18 +6,6 @@ import logging
 
 from relayUtils import *
 
-
-def jtest():
-	closeAllRelays()
-	time.sleep(1)
-	openAllRelays()
-	time.sleep(1)
-
-	closeRelay(1)
-	time.sleep(1)
-	openRelay(1)
-	time.sleep(1)
-
 def ctest():
 	relays = relayBoard()
 	relays.loadLib()
