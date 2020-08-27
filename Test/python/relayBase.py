@@ -1,5 +1,5 @@
 """
-Simple test for the USB relay DLL
+Simple test for the usb_relay_device relay DLL
 Just plain calling the C library, no fancy OOP stuff
 Uses CTYPES
 
@@ -12,7 +12,8 @@ print("Running on Python v." + str(sys.version))
 print("%d-bit mode" % ({4:32, 8:64}[ctypes.sizeof(ctypes.c_void_p)]) )
 
 # Fix the path below if the library is not in current dir.
-libpath = "../usb-relay-hid_bin-20150330a"
+#libpath = "../../usb-relay-hid_bin-20150330a/bin-Win64"
+libpath = "."
 
 if sys.version_info.major >= 3:
   def charpToString(charp):
