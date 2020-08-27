@@ -33,3 +33,5 @@
 *.suo
 *.ncb
 *.sdf
+
+/usb-relay-hid_bin*
