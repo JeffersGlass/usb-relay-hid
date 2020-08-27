@@ -2,7 +2,10 @@
 
 import sys, os, time
 import ctypes
+import logging
+
 from relayUtils import *
+
 
 def jtest():
 	closeAllRelays()
@@ -21,6 +24,8 @@ def ctest():
 
 
 def main():
+	logging.basicConfig(level=logging.DEBUG)
+
 	print("Starting test")
 	ctest()
 	print("Ending test")

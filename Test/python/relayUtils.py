@@ -9,6 +9,9 @@ For python 2.7, 3
 """
 import sys, os, time
 import ctypes
+import logging
+
+##Utility Functions
 
 def exc(msg):  return Exception(msg)
 
@@ -25,6 +28,24 @@ else:
   def stringToCharp(s) :   
     return bytes(s)  #bytes(s, "ascii")
 
+#USB Function Definitions
+
+usb_relay_lib_funcs = [
+# TYpes: h=handle (pointer sized), p=pointer, i=int, e=error num (int), s=string
+  ("usb_relay_device_enumerate",               'h', None),
+  ("usb_relay_device_close",                   'e', 'h'),
+  ("usb_relay_device_open_with_serial_number", 'h', 'si'),
+  ("usb_relay_device_get_num_relays",          'i', 'h'),
+  ("usb_relay_device_get_id_string",           's', 'h'),
+  ("usb_relay_device_next_dev",                'h', 'h'),
+  ("usb_relay_device_get_status_bitmap",       'i', 'h'),
+  ("usb_relay_device_open_one_relay_channel",  'e', 'hi'),
+  ("usb_relay_device_close_one_relay_channel", 'e', 'hi'),
+  ("usb_relay_device_close_all_relay_channel", 'e', None)
+  ]
+
+##Class definitions
+
 class relayBoard():
     def __init__(self, numRelays, libpath='.'):
         self.numRelays = numRelays
@@ -36,30 +57,94 @@ class relayBoard():
                } [os.name]
         self.DLL = None
 
-    usb_relay_lib_funcs = [
-  # TYpes: h=handle (pointer sized), p=pointer, i=int, e=error num (int), s=string
-    ("usb_relay_device_enumerate",               'h', None),
-    ("usb_relay_device_close",                   'e', 'h'),
-    ("usb_relay_device_open_with_serial_number", 'h', 'si'),
-    ("usb_relay_device_get_num_relays",          'i', 'h'),
-    ("usb_relay_device_get_id_string",           's', 'h'),
-    ("usb_relay_device_next_dev",                'h', 'h'),
-    ("usb_relay_device_get_status_bitmap",       'i', 'h'),
-    ("usb_relay_device_open_one_relay_channel",  'e', 'hi'),
-    ("usb_relay_device_close_one_relay_channel", 'e', 'hi'),
-    ("usb_relay_device_close_all_relay_channel", 'e', None)
-    ]
-
     def loadLib(self):
         if not self.DLL:
-            print("Loading DLL: %s" % ('/'.join([self.libpath,self.libfile])))
+            logging.debug("Loading DLL: %s" % ('/'.join([self.libpath,self.libfile])))
             try:
-                self.dll = ctypes.CDLL( '/'.join([self.libpath, self.libfile]) )
+                self.DLL = ctypes.CDLL( '/'.join([self.libpath, self.libfile]) )
             except OSError:
                 fail("Failed to load lib")
         else:
             print("Lib already loaded")
+        self.getLibFunctions()
+        logging.debug("Lib functions successfully loaded")
 
+    def getLibFunctions(self):
+        if self.DLL == None:
+            raise AttributeError("DLL does not exist or not loaded")
+        else:
+            self.libver = self.DLL.usb_relay_device_lib_version() 
+            logging.debug("%s version: 0x%X" % (self.libfile,self.libver))
+
+            retVal = self.DLL.usb_relay_init()
+            if retVal != 0: fail("Failed to initialize library")
+
+            """
+            Tweak imported C functions
+            This is required in 64-bit mode. Optional for 32-bit (pointer size=int size)
+            Functions that return and receive ints or void work without specifying types.
+            """            
+
+            ctypemap = { 'e': ctypes.c_int, 'h':ctypes.c_void_p, 'p': ctypes.c_void_p,
+                      'i': ctypes.c_int, 's': ctypes.c_char_p}
+          
+            for x in usb_relay_lib_funcs :
+                fname, ret, param = x
+                try:
+                  f = getattr(self.DLL, fname)
+                except Exception:  
+                  fail("Missing lib export:" + fname)
+          
+                ps = []
+                if param :
+                  for p in param :
+                    ps.append( ctypemap[p] )
+                f.restype = ctypemap[ret]
+                f.argtypes = ps
+                setattr(self.DLL, fname, f)
+
+            #added so as not to crash on some 64 bit systems:
+            self.DLL.usb_relay_device_close_all_relay_channel.argtypes = [ctypes.c_longlong]
+
+
+
+
+'''def getLibFunctions():
+  """ Get needed functions and configure types; call lib. init.
+  """
+  assert L.dll
+  
+  #Get lib version (my extension, not in the original dll)
+  libver = L.dll.usb_relay_device_lib_version()  
+  print("%s version: 0x%X" % (libfile,libver))
+  
+  ret = L.dll.usb_relay_init()
+  if ret != 0 : fail("Failed lib init!")
+ 
+  """
+  Tweak imported C functions
+  This is required in 64-bit mode. Optional for 32-bit (pointer size=int size)
+  Functions that return and receive ints or void work without specifying types.
+  """
+  ctypemap = { 'e': ctypes.c_int, 'h':ctypes.c_void_p, 'p': ctypes.c_void_p,
+            'i': ctypes.c_int, 's': ctypes.c_char_p}
+  for x in usb_relay_lib_funcs :
+      fname, ret, param = x
+      try:
+        f = getattr(L.dll, fname)
+      except Exception:  
+        fail("Missing lib export:" + fname)
+
+      ps = []
+      if param :
+        for p in param :
+          ps.append( ctypemap[p] )
+      f.restype = ctypemap[ret]
+      f.argtypes = ps
+      setattr(L, fname, f)
+
+  #added so as not to crash on some 64 bit systems:
+  L.usb_relay_device_close_all_relay_channel.argtypes = [ctypes.c_longlong]'''
 
 '''def loadLib():
   # Load the C DLL ...
@@ -92,47 +177,6 @@ hdev = None
 class L: pass   # Global object for the DLL
 setattr(L, "dll", None)
 
-
-
-
-      
-      
-def getLibFunctions():
-  """ Get needed functions and configure types; call lib. init.
-  """
-  assert L.dll
-  
-  #Get lib version (my extension, not in the original dll)
-  libver = L.dll.usb_relay_device_lib_version()  
-  print("%s version: 0x%X" % (libfile,libver))
-  
-  ret = L.dll.usb_relay_init()
-  if ret != 0 : fail("Failed lib init!")
-  
-  """
-  Tweak imported C functions
-  This is required in 64-bit mode. Optional for 32-bit (pointer size=int size)
-  Functions that return and receive ints or void work without specifying types.
-  """
-  ctypemap = { 'e': ctypes.c_int, 'h':ctypes.c_void_p, 'p': ctypes.c_void_p,
-            'i': ctypes.c_int, 's': ctypes.c_char_p}
-  for x in usb_relay_lib_funcs :
-      fname, ret, param = x
-      try:
-        f = getattr(L.dll, fname)
-      except Exception:  
-        fail("Missing lib export:" + fname)
-
-      ps = []
-      if param :
-        for p in param :
-          ps.append( ctypemap[p] )
-      f.restype = ctypemap[ret]
-      f.argtypes = ps
-      setattr(L, fname, f)
-
-  #added so as not to crash on some 64 bit systems:
-  L.usb_relay_device_close_all_relay_channel.argtypes = [ctypes.c_longlong]
       
 def openDevById(idstr):
   #Open by known ID:
