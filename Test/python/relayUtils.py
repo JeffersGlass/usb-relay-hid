@@ -28,6 +28,8 @@ else:
   def stringToCharp(s) :   
     return bytes(s)  #bytes(s, "ascii")
 
+#Enumeration Functions
+
 #USB Function Definitions
 
 usb_relay_lib_funcs = [
@@ -46,9 +48,10 @@ usb_relay_lib_funcs = [
 
 ##Class definitions
 
+
+
 class relayBoard():
-    def __init__(self, numRelays, libpath='.'):
-        self.numRelays = numRelays
+    def __init__(self, libpath='.'):
         self.libpath = libpath
 
         self.libfile = {'nt':   "usb_relay_device.dll", 
@@ -106,7 +109,81 @@ class relayBoard():
             #added so as not to crash on some 64 bit systems:
             self.DLL.usb_relay_device_close_all_relay_channel.argtypes = [ctypes.c_longlong]
 
+    def openDevById(self, idstr):
+        logging.debug("Trying to open device with id: " + idstr)   
+        self.device = self.DLL.usb_relay_device_open_with_serial_number(stringToCharp(idstr), 5)
+        if not self.device: fail("Cannot open device with id: " + idstr)
 
+        self.numRelays = self.DLL.usb_relay_device_get_num_relays(self.device)
+        if self.numRelays <= 0 or self.numRelays > 8: fail("Too many or too few channels, should be 1-8, but is:" + str(self. numRelays))
+        logging.debug("Number of relays on device with ID=%s: %d" % (idstr, self.numRelays))
+
+    def enumDevs(self):
+      devids = []
+      enuminfo = self.DLL.usb_relay_device_enumerate()
+      while enuminfo :
+        idstrp = self.DLL.usb_relay_device_get_id_string(enuminfo)
+        idstr = charpToString(idstrp)
+        logging.info("Found ID string: " + idstr)
+        assert len(idstr) == 5
+        if not idstr in devids : devids.append(idstr)
+        else : logging.warning("Warning! found duplicate ID=" + idstr)
+        enuminfo = self.DLL.usb_relay_device_next_dev(enuminfo)
+
+      logging.info("Found devices: %d" % len(devids))
+      return devids
+
+    def closeDev(self):
+        self.DLL.usb_relay_device_close(self.device)
+        self.device = None
+        logging.info("Device Closed")
+
+    def unloadLib(self):
+        if self.device: closeDev()
+        self.DLL.usb_relay_exit()
+        self.DLL = None
+        logging.info("Lib closed")
+
+    def closeRelay(self, num):
+      if 0 < num <= self.numRelays:
+        retVal = self.DLL.usb_relay_device_open_one_relay_channel(self.device, num)
+        if retVal != 0:
+         fail("Faied to close relay channel " + num)
+        else: return 0
+    
+    def openRelay(self, num):
+      if 0 < num <= self.numRelays:
+        retVal = self.DLL.usb_relay_device_close_one_relay_channel(self.device, num)
+        if retVal != 0:
+         fail("Faied to close relay channel " + num)
+        else: return 0
+    
+    def closeAllRelays(self):
+      for i in range (1, self.numRelays+1):
+        retVal = closeRelay(i)
+        if retVal != 0:
+           fail("Failed OPEN all!")
+      return 0
+    
+    def openAllRelays(self):
+      for i in range (1, self.numRelays+1):
+        retVal = openRelay(i)
+        if retVal != 0:
+           fail("Failed OPEN all!")
+      return 0
+
+
+'''def openDevById(idstr):
+  #Open by known ID:
+  print("Opening " + idstr)
+  h = L.usb_relay_device_open_with_serial_number(stringToCharp(idstr), 5)
+  if not h: fail("Cannot open device with id="+idstr)
+  global numch
+  numch = L.usb_relay_device_get_num_relays(h)
+  if numch <= 0 or numch > 8 : fail("Bad number of channels, can be 1-8")
+  global hdev
+  hdev = h  
+  print("Number of relays on device with ID=%s: %d" % (idstr, numch))'''
 
 
 '''def getLibFunctions():
@@ -169,15 +246,15 @@ class relayBoard():
 
 #?? MAC => os.name == "posix" and sys.platform == "darwin"
 
-devids = []
-hdev = None
+#devids = []
+#hdev = None
 
 
  
-class L: pass   # Global object for the DLL
-setattr(L, "dll", None)
+#class L: pass   # Global object for the DLL
+#setattr(L, "dll", None)
 
-      
+'''      
 def openDevById(idstr):
   #Open by known ID:
   print("Opening " + idstr)
@@ -188,14 +265,14 @@ def openDevById(idstr):
   if numch <= 0 or numch > 8 : fail("Bad number of channels, can be 1-8")
   global hdev
   hdev = h  
-  print("Number of relays on device with ID=%s: %d" % (idstr, numch))
+  print("Number of relays on device with ID=%s: %d" % (idstr, numch))'''
 
-def closeDev():
+'''def closeDev():
   global hdev
   L.usb_relay_device_close(hdev)
-  hdev = None
+  hdev = None'''
 
-def enumDevs():
+'''def enumDevs():
   global devids
   devids = []
   enuminfo = L.usb_relay_device_enumerate()
@@ -209,14 +286,14 @@ def enumDevs():
     enuminfo = L.usb_relay_device_next_dev(enuminfo)
 
   print("Found devices: %d" % len(devids))
-  return devids
+  return devids'''
   
-def unloadLib():
+'''def unloadLib():
   global hdev, L
   if hdev: closeDev()
   L.dll.usb_relay_exit()
   L.dll = None
-  print("Lib closed")
+  print("Lib closed")'''
   
 '''def testR2():
   """ Test one device with handle hdev, 1 or 2 channels """
@@ -267,7 +344,7 @@ def unloadLib():
       fail("Bad state after all off!")
 
   print("*** test R2 PASS ***")'''
-
+'''
 def closeRelay(num):
   if 0 < num <= numch:
     ret = L.usb_relay_device_open_one_relay_channel(hdev, num)
@@ -295,7 +372,9 @@ def openAllRelays():
     if ret != 0:
        fail("Failed OPEN all!")
   return 0
+  '''
 
+'''
 def testR4():
   """ Test one device with handle hdev, 1 or 2 channels """
   global numch, hdev
@@ -359,7 +438,7 @@ def testR4():
       fail("Bad state after all off!")
 
   print("*** test R4 PASS ***")
-  
+'''
 # main
 def main():
   print("Test 4-ch relay")

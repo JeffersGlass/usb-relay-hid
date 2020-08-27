@@ -19,8 +19,20 @@ def jtest():
 	time.sleep(1)
 
 def ctest():
-	relays = relayBoard(4)
+	relays = relayBoard()
 	relays.loadLib()
+	ids = relays.enumDevs()
+	if len(ids) > 0:
+		relays.openDevById(ids[0])
+	
+	relays.closeRelay(1)
+	time.sleep(1)
+	relays.openRelay(1)
+	time.sleep(1)
+
+	relays.closeDev()
+	relays.unloadLib()
+	
 
 
 def main():
