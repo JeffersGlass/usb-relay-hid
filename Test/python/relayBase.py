@@ -12,7 +12,7 @@ print("Running on Python v." + str(sys.version))
 print("%d-bit mode" % ({4:32, 8:64}[ctypes.sizeof(ctypes.c_void_p)]) )
 
 # Fix the path below if the library is not in current dir.
-libpath = "."
+libpath = "../usb-relay-hid_bin-20150330a"
 
 if sys.version_info.major >= 3:
   def charpToString(charp):
