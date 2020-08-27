@@ -125,10 +125,10 @@ class relayBoard():
         self.numRelays = self.DLL.usb_relay_device_get_num_relays(self.device)
         if self.numRelays <= 0 or self.numRelays > 8: fail("Too many or too few channels, should be 1-8, but is:" + str(self. numRelays))
         
-        self.blinking = [False for i in range(1, self.numRelays+2)]
-        self.blinkTiming = [1 for i in range (1, self.numRelays+2)]
-        self.blinkStops = [threading.Event() for i in range(1, self.numRelays+2)]
-        self.blinkThreads = [threading.Thread(target=self.__blink, args=(i,)) for i in range (1, self.numRelays+2)]
+        self.blinking = [False for i in range(1, self.numRelays+1)]
+        self.blinkTiming = [1 for i in range (1, self.numRelays+1)]
+        self.blinkStops = [threading.Event() for i in range(1, self.numRelays+1)]
+        self.blinkThreads = [threading.Thread(target=self.__blink, args=(i,)) for i in range (1, self.numRelays+1)]
 
         for t in self.blinkThreads:
             t.start()
@@ -197,13 +197,13 @@ class relayBoard():
         self.blinkStops[num].set()
 
     def __blink(self, num):
-            while self.blinkStops[num].is_set():
-                if self.blinking[num]:
-                    self.closeRelay(num)
-                    print("Close")
-                    sleep(blinkTiming[num])
-                    self.openRelay(num)
-                    print("Open")
-                    sleep(blinkTiming[num])
+            print(num)
+            while self.blinking[num]:
+                self.closeRelay(num)
+                print("Close")
+                sleep(blinkTiming[num])
+                self.openRelay(num)
+                print("Open")
+                sleep(blinkTiming[num])
 
 
