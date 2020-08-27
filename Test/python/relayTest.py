@@ -2,7 +2,7 @@
 
 import sys, os, time
 import ctypes
-from relayBase import *
+from relayUtils import *
 
 def jtest():
 	closeAllRelays()
@@ -15,9 +15,18 @@ def jtest():
 	openRelay(1)
 	time.sleep(1)
 
+def ctest():
+	relays = relayBoard(4)
+	relays.loadLib()
 
 
 def main():
+	print("Starting test")
+	ctest()
+	print("Ending test")
+
+
+'''def main():
 	print("Test 4-ch relay")
 	loadLib()
 	getLibFunctions()
@@ -29,10 +38,10 @@ def main():
 			# Test any 1st found dev .
 			print("Testing relay with ID=" + devids[0])
 			openDevById(devids[0])
-			jtest()
+			ctest()
 			closeDev()
 	finally:  
-		unloadLib()
+		unloadLib()'''
 
 if __name__ == "__main__" :
   main()
