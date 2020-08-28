@@ -64,7 +64,7 @@ class relayBoard():
 
         #All of these will be initialize in openDevById after we know how many relays there are:
         self.blinking = {}#True or false, depending on if a pin is blinking
-        self.blinkThreads = {} #holds blinking threads
+        self.blinkThreads = None #holds blinking threads
 
     def loadLib(self):
         if not self.DLL:
@@ -126,8 +126,8 @@ class relayBoard():
         self.blinkAlive = True #set to false to kill 
         for i in range(1, self.numRelays+1):
           self.blinking[i] = False # = [False for i in range(1, self.numRelays+1)]
-          self.blinkThreads[i] = threading.Thread(target=self.__blink, args=(i,)) #[threading.Thread(target=self.__blink, args=(i,)) for i in range (1, self.numRelays+1)]
-          self.blinkThreads[i].start()
+        self.blinkThread = threading.Thread(target=self.__blink) #[threading.Thread(target=self.__blink, args=(i,)) for i in range (1, self.numRelays+1)]
+        self.blinkThread.start()
 
 
 
@@ -197,15 +197,23 @@ class relayBoard():
     def noBlink(self, num):
         self.blinking[num] = False
 
-    def __blink(self, num):
+    def __blink(self):
         while (self.blinkAlive):
-          if self.blinking[num] == True:
-            self.closeRelay(num)
-            logging.debug("Blink Close: " + str(num))
-            time.sleep(1)
-            self.openRelay(num)
-            logging.debug("Blink Open: " + str(num))
-            time.sleep(1)
-        logging.info("Blink Thread " + str(num) + " stopped")
+          logging.debug(self.blinking)
+          for i in range(1, self.numRelays+1):
+            if self.blinking[i] == True:
+              self.closeRelay(i)
+              logging.debug("Blink Close: " + str(i))
+
+          time.sleep(1)
+
+          logging.debug(self.blinking)
+          for i in range(1, self.numRelays+1):
+            if self.blinking[i] == True:
+              self.openRelay(i)
+              logging.debug("Blink Open: " + str(i))
+          time.sleep(1)
+
+        logging.info("Blink Thread stopped")
 
 
