@@ -12,13 +12,27 @@ def ctest():
 	ids = relays.enumDevs()
 	if len(ids) > 0:
 		relays.openDevById(ids[0])
+	else: exit("No relay board found")
 	
 	relays.closeRelay(1)
 	time.sleep(1)
 	relays.openRelay(1)
 	time.sleep(1)
+
+	relays.closeAllRelays()
+	time.sleep(1)
+	relays.openAllRelays()
+	time.sleep(1)
 	
 	relays.blinkRelay(1)
+	time.sleep(10)
+	relays.blinkRelay(2)
+	time.sleep(10)
+	relays.blinkRelay(3)
+	time.sleep(10)
+	relays.noBlink(1)
+	time.sleep(5)	
+	relays.openAllRelays()
 	relays.closeDev()
 	relays.unloadLib()
 	

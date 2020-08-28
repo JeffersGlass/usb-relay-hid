@@ -63,10 +63,8 @@ class relayBoard():
         self.DLL = None
 
         #All of these will be initialize in openDevById after we know how many relays there are:
-        self.blinking = [] #True or false, depending on if a pin is blinking
-        self.blinkStart = [] #datetime.now() that pin started blinking
-        self.blinkThreads = [] #holds blinking threads
-        self.blinkStops = [] #signals to stop blinking
+        self.blinking = {}#True or false, depending on if a pin is blinking
+        self.blinkThreads = {} #holds blinking threads
 
     def loadLib(self):
         if not self.DLL:
@@ -125,13 +123,13 @@ class relayBoard():
         self.numRelays = self.DLL.usb_relay_device_get_num_relays(self.device)
         if self.numRelays <= 0 or self.numRelays > 8: fail("Too many or too few channels, should be 1-8, but is:" + str(self. numRelays))
         
-        self.blinking = [False for i in range(1, self.numRelays+1)]
-        self.blinkTiming = [1 for i in range (1, self.numRelays+1)]
-        self.blinkStops = [threading.Event() for i in range(1, self.numRelays+1)]
-        self.blinkThreads = [threading.Thread(target=self.__blink, args=(i,)) for i in range (1, self.numRelays+1)]
+        self.blinkAlive = True #set to false to kill 
+        for i in range(1, self.numRelays+1):
+          self.blinking[i] = False # = [False for i in range(1, self.numRelays+1)]
+          self.blinkThreads[i] = threading.Thread(target=self.__blink, args=(i,)) #[threading.Thread(target=self.__blink, args=(i,)) for i in range (1, self.numRelays+1)]
+          self.blinkThreads[i].start()
 
-        for t in self.blinkThreads:
-            t.start()
+
 
         logging.debug("Number of relays on device with ID=%s: %d" % (idstr, self.numRelays))
 
@@ -153,6 +151,8 @@ class relayBoard():
     def closeDev(self):
         self.DLL.usb_relay_device_close(self.device)
         self.device = None
+        self.blinkAlive = False
+        time.sleep(2)
         logging.info("Device Closed")
 
     def unloadLib(self):
@@ -163,6 +163,7 @@ class relayBoard():
 
     def closeRelay(self, num):
       if 0 < num <= self.numRelays:
+        self.blinking[num-1] = False
         retVal = self.DLL.usb_relay_device_open_one_relay_channel(self.device, num)
         if retVal != 0:
          fail("Faied to close relay channel " + num)
@@ -170,6 +171,7 @@ class relayBoard():
     
     def openRelay(self, num):
       if 0 < num <= self.numRelays:
+        self.blinking[num-1] = False
         retVal = self.DLL.usb_relay_device_close_one_relay_channel(self.device, num)
         if retVal != 0:
          fail("Faied to close relay channel " + num)
@@ -177,14 +179,14 @@ class relayBoard():
     
     def closeAllRelays(self):
       for i in range (1, self.numRelays+1):
-        retVal = closeRelay(i)
+        retVal = self.closeRelay(i)
         if retVal != 0:
            fail("Failed OPEN all!")
       return 0
     
     def openAllRelays(self):
       for i in range (1, self.numRelays+1):
-        retVal = openRelay(i)
+        retVal = self.openRelay(i)
         if retVal != 0:
            fail("Failed OPEN all!")
       return 0
@@ -192,18 +194,18 @@ class relayBoard():
     def blinkRelay(self, num, timing = 1):
         self.blinking[num] = True
 
-    def noBlinkRelay(self, num):
+    def noBlink(self, num):
         self.blinking[num] = False
-        self.blinkStops[num].set()
 
     def __blink(self, num):
-            print(num)
-            while self.blinking[num]:
-                self.closeRelay(num)
-                print("Close")
-                sleep(blinkTiming[num])
-                self.openRelay(num)
-                print("Open")
-                sleep(blinkTiming[num])
+        while (self.blinkAlive):
+          if self.blinking[num] == True:
+            self.closeRelay(num)
+            logging.debug("Blink Close: " + str(num))
+            time.sleep(1)
+            self.openRelay(num)
+            logging.debug("Blink Open: " + str(num))
+            time.sleep(1)
+        logging.info("Blink Thread " + str(num) + " stopped")
 
 
