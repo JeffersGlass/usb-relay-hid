@@ -26,10 +26,13 @@ def ctest():
 	
 	relays.blinkRelay(1)
 	time.sleep(10)
+
 	relays.blinkRelay(2)
 	time.sleep(10)
+
 	relays.blinkRelay(3)
 	time.sleep(10)
+	
 	relays.noBlink(1)
 	time.sleep(5)	
 	relays.openAllRelays()
